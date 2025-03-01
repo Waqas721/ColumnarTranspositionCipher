@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Columnar Transposition Cipher</title>
+    <link rel="shortcut icon" href="encryption.png" type="image/x-icon">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #eef1f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 500px;
+            text-align: center;
+        }
+        h1 { margin-bottom: 15px; color: #333; }
+        .input-group { margin-bottom: 12px; text-align: left; }
+        .input-group label { font-weight: bold; }
+        .input-group input, .input-group textarea {
+            width: 95%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .button-group button {
+            width: 48%; padding: 10px; color: white;
+            border: none; border-radius: 6px; cursor: pointer; font-size: 14px;
+        }
+        .encrypt { background-color: #28a745; }
+        .decrypt { background-color: #dc3545; }
+        .result-group pre {
+            background-color: #f8f9fa;
+            padding: 10px; border: 1px solid #ccc;
+            border-radius: 6px; font-size: 14px; text-align: left;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+
+        footer {
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Columnar Transposition Cipher</h1>
+
+        <div class="input-group">
+            <label>Enter Text:</label>
+            <textarea id="textInput" rows="2" placeholder="Enter text..."></textarea>
+        </div>
+        <div class="input-group">
+            <label>Enter Key:</label>
+            <input type="text" id="keyInput" placeholder="Enter key...">
+        </div>
+        <div class="input-group">
+            <label>Enter Number of Rows:</label>
+            <input type="number" id="rowInput" min="2" placeholder="Enter rows...">
+        </div>
+
+        <div class="button-group">
+            <button class="encrypt" onclick="columnarEncrypt()">Encrypt</button>
+            <button class="decrypt" onclick="columnarDecrypt()">Decrypt</button>
+        </div>
+       <br>
+        <div class="result-group">
+            <label>Grid:</label>
+            <pre id="cipherTable">Grid will appear here...</pre>
+        </div>
+        <div class="result-group">
+            <label>Result:</label>
+            <pre id="textResult">Result will appear here...</pre>
+        </div>
+        
+        <footer>
+            <p>&copy; 2025 Muhammad Waqas Ansari (B21110006095)</p>
+        </footer>
+    </div>
+
+    <script>
+        function getNumericKey(key) {
+            let sortedKey = key.split('').map((c, i) => ({ char: c, index: i }))
+                .sort((a, b) => a.char.localeCompare(b.char));
+            return sortedKey.map((item, i) => ({ index: item.index, order: i + 1 }));
+        }
+
+        function getRandomLetter() {
+            return String.fromCharCode(65 + Math.floor(Math.random() * 26)); // Random A-Z
+        }
+
+        function columnarEncrypt() {
+            let text = document.getElementById('textInput').value.replace(/\s+/g, '').toUpperCase();
+            let key = document.getElementById('keyInput').value.toUpperCase();
+            let rows = parseInt(document.getElementById('rowInput').value);
+            let cols = key.length;
+
+            if (!text || !key || isNaN(rows) || rows < 2 || cols < 2) {
+                alert("Invalid input! Ensure rows > 1, columns > 1, and key is provided.");
+                return;
+            }
+
+            let grid = Array.from({ length: rows }, () => Array(cols).fill(null));
+            let index = 0;
+
+            // Fill grid with text and placeholders
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (index < text.length) {
+                        grid[r][c] = text[index++];
+                    } else {
+                        let randomChar = getRandomLetter();
+                        grid[r][c] = randomChar + "*"; // Mark filler letters
+                    }
+                }
+            }
+
+            // Generate cipher text column-wise based on sorted key order
+            let keyOrder = getNumericKey(key);
+            let cipherText = "";
+            for (let { index: colIndex } of keyOrder.sort((a, b) => a.order - b.order)) {
+                for (let r = 0; r < rows; r++) {
+                    cipherText += grid[r][colIndex] + " "; // Space for clarity
+                }
+            }
+
+            let gridDisplay = grid.map(row => row.map(cell => (cell || ' ')).join(' ')).join('\n');
+            document.getElementById('cipherTable').textContent = gridDisplay;
+            document.getElementById('textResult').textContent = cipherText.trim();
+        }
+
+        function columnarDecrypt() {
+            let cipherText = document.getElementById('textInput').value.toUpperCase().split(/\s+/);
+            let key = document.getElementById('keyInput').value.toUpperCase();
+            let rows = parseInt(document.getElementById('rowInput').value);
+            let cols = key.length;
+
+            if (!cipherText.length || !key || isNaN(rows) || rows < 2 || cols < 2) {
+                alert("Invalid input! Ensure text, key, and valid row count are provided.");
+                return;
+            }
+
+            let grid = Array.from({ length: rows }, () => Array(cols).fill(null));
+            let keyOrder = getNumericKey(key);
+            let index = 0;
+
+            // Fill grid column-wise based on sorted key order
+            for (let { index: colIndex } of keyOrder.sort((a, b) => a.order - b.order)) {
+                for (let r = 0; r < rows; r++) {
+                    if (index < cipherText.length) {
+                        grid[r][colIndex] = cipherText[index++];
+                    }
+                }
+            }
+
+            // Extract plaintext row-wise, ignoring fillers
+            let plainText = "";
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (grid[r][c] && !grid[r][c].includes('*')) {
+                        plainText += grid[r][c];
+                    }
+                }
+            }
+
+            let gridDisplay = grid.map(row => row.join(' ')).join('\n');
+            document.getElementById('cipherTable').textContent = gridDisplay;
+            document.getElementById('textResult').textContent = plainText;
+        }
+    </script>
+</body>
+</html>
